@@ -27,6 +27,9 @@ Image editing with Bria’s [Fibo-Edit](https://huggingface.co/briaai/Fibo-Edit)
 - Modal account and CLI: `pip install modal` then `modal token new`.
 - Hugging Face token (for gated models). Create a Modal secret named `huggingface-secret` with `HF_TOKEN=<your_token>`.
 
+<details>
+<summary><strong>Steps</strong></summary>
+
 ## 0. Clone required repos
 
 `inference.py` bundles Fibo-Edit source and the FIBO VLM prompt-to-JSON pipeline into the Modal image via local paths. From the project root, clone both repos:
@@ -57,7 +60,9 @@ Modal prints the web app URL (e.g. `https://<workspace>--fibo-edit-web-endpoint.
 
 ## 3. Using the UI
 
-At the app root you get the frontend. Provide an image (upload or URL), enter a natural-language edit instruction, submit. The backend converts the instruction to JSON with the local FIBO VLM, runs Fibo-Edit (LoRA already fused in), and returns the edited image. No Gemini or other external API is used.
+At the app root you get the frontend. Provide an image (upload or URL), enter a prompt and click edit, the backend converts the prompt to JSON with the local FIBO VLM, runs Fibo-Edit (LoRA already fused in) and returns the edited image. No Gemini or other external API is needed/used.
+
+</details>
 
 ## API
 
