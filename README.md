@@ -4,9 +4,11 @@ Image editing with Bria’s [Fibo-Edit](https://huggingface.co/briaai/Fibo-Edit)
 
 ## Example outputs
 
-| Car recoloring | change outfit |
+| Input | Output |
 |:---:|:---:|
-| ![Car recoloring](out1.png) | ![Attire change](out2.png) |
+| ![Input](input.jpg) | ![Output](output.png) |
+
+*Input image: [Tatyana Doloman](https://www.pexels.com/@tatyana-doloman-728740365/) on Pexels (free to use).*
 
 ## Files Inculded
 
