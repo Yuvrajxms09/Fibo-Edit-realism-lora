@@ -4,11 +4,14 @@ Image editing with Bria’s [Fibo-Edit](https://huggingface.co/briaai/Fibo-Edit)
 
 ## Example outputs
 
-**Prompt:** *change the outfit to a summer chic dress*
+Single input, three edits (same image, different prompts):
 
-| Input | Output |
-|:---:|:---:|
-| <img src="input.jpg" width="400"/> | <img src="output.png" width="400"/> |
+| Input | Output 1 | Output 2 | Output 3 |
+|:---:|:---:|:---:|:---:|
+| <img src="input.jpg" width="280"/> | <img src="output.png" width="280"/> | <img src="output2.png" width="280"/> | <img src="output3.png" width="280"/> |
+| — | *summer chic dress* | *red stylish gown* | *emerald green satin evening gown* |
+
+**Prompts:** (1) *change the outfit to a summer chic dress* — (2) *put her in a red stylish gown* — (3) *Replace clothing with a fitted emerald green satin evening gown, subtle jewelry, soft curls. Cinematic lighting, luxury fashion editorial, shallow depth of field.*
 
 *Input image: [Tatyana Doloman](https://www.pexels.com/@tatyana-doloman-728740365/) on Pexels (free to use).*
 
