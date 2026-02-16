@@ -4,9 +4,11 @@ Image editing with Bria’s [Fibo-Edit](https://huggingface.co/briaai/Fibo-Edit)
 
 ## Example outputs
 
+**Prompt:** *change the outfit to a summer chic dress*
+
 | Input | Output |
 |:---:|:---:|
-| ![Input](input.jpg) | ![Output](output.png) |
+| <img src="input.jpg" width="400"/> | <img src="output.png" width="400"/> |
 
 *Input image: [Tatyana Doloman](https://www.pexels.com/@tatyana-doloman-728740365/) on Pexels (free to use).*
 
