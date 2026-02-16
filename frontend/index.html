@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fibo Edit — Modal</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body x-data="state()" class="bg-neutral-50 min-h-screen">
+    <div class="max-w-3xl mx-auto pt-4 pb-8 px-4 sm:py-12 sm:px-6 lg:px-8">
+      <h2 class="text-3xl font-medium text-center mb-2 text-neutral-900">
+        Fibo Edit
+      </h2>
+      <p class="text-center text-sm text-neutral-500 mb-8">Edit images with natural language</p>
+
+      <form
+        @submit.prevent="submitEdit"
+        class="flex flex-col gap-4 mb-6"
+      >
+        <div>
+          <label class="block text-sm font-medium text-neutral-700 mb-1">Edit instruction</label>
+          <textarea
+            x-model="prompt"
+            x-ref="promptInput"
+            rows="2"
+            placeholder="e.g. Make the sky more dramatic"
+            @keydown.meta.enter.prevent="submitEdit"
+            @keydown.ctrl.enter.prevent="submitEdit"
+            class="w-full px-3 py-3 text-md bg-white border rounded-md border-neutral-300 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-400"
+          ></textarea>
+          <p class="mt-1 text-xs text-neutral-400">⌘ Enter or Ctrl+Enter to submit</p>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mb-1">
+          <span class="text-sm text-neutral-600">Try:</span>
+          <template x-for="suggestion in promptSuggestions" :key="suggestion">
+            <button
+              type="button"
+              @click="prompt = suggestion"
+              class="text-sm px-2.5 py-1 rounded-full bg-neutral-200 hover:bg-neutral-300 text-neutral-700 transition-colors"
+              x-text="suggestion"
+            ></button>
+          </template>
+        </div>
+
+        <div class="flex flex-wrap gap-4 items-start">
+          <div class="flex-1 min-w-0">
+            <label class="block text-sm font-medium text-neutral-700 mb-1">Image</label>
+            <div
+              class="border-2 border-dashed rounded-lg p-4 transition-colors"
+              :class="imageURL ? 'border-neutral-300 bg-neutral-50' : 'border-neutral-300 hover:border-neutral-400 hover:bg-neutral-50/50'"
+              @dragover.prevent="dragOver = true"
+              @dragleave="dragOver = false"
+              @drop.prevent="onDrop($event)"
+            >
+              <input
+                type="file"
+                accept="image/*"
+                @change="onImageChange"
+                class="hidden"
+                x-ref="fileInput"
+              />
+              <button
+                type="button"
+                @click="$refs.fileInput.click()"
+                class="text-sm text-neutral-600 hover:text-neutral-800 font-medium"
+              >
+                Choose file
+              </button>
+              <span class="text-neutral-400" x-show="!imageURL"> or drag and drop</span>
+              <span class="text-neutral-600 truncate block mt-1" x-show="imageURL" x-text="imageFileName || 'Image selected'"></span>
+            </div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <label class="block text-sm font-medium text-neutral-700 mb-1">Or image URL</label>
+            <input
+              type="url"
+              x-model="imageURLInput"
+              placeholder="https://..."
+              @blur="loadImageFromURL()"
+              @keydown.enter.prevent="loadImageFromURL()"
+              class="w-full px-3 py-2 text-sm bg-white border rounded-md border-neutral-300 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-400"
+            />
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="submit"
+            :disabled="loading || !canSubmit || !prompt.trim()"
+            class="px-4 py-2 text-sm font-semibold text-white rounded-md bg-neutral-900 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-offset-2 focus:ring-neutral-900 flex items-center gap-2"
+          >
+            <span x-show="!loading">Edit image</span>
+            <span x-show="loading" class="flex items-center gap-2">
+              <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              Editing…
+            </span>
+          </button>
+          <button
+            type="button"
+            @click="clearAll()"
+            class="px-4 py-2 text-sm font-medium text-neutral-600 hover:text-neutral-800 rounded-md border border-neutral-300 hover:bg-neutral-100"
+          >
+            Clear
+          </button>
+        </div>
+      </form>
+
+      <div class="mb-6" x-show="imageURL || resultURL">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex rounded-lg border border-neutral-300 p-0.5 bg-neutral-100">
+            <button
+              type="button"
+              @click="viewMode = 'input'"
+              :class="viewMode === 'input' ? 'bg-white shadow text-neutral-900' : 'text-neutral-600 hover:text-neutral-800'"
+              class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
+            >
+              Input
+            </button>
+            <button
+              type="button"
+              @click="viewMode = 'output'"
+              :class="viewMode === 'output' ? 'bg-white shadow text-neutral-900' : 'text-neutral-600 hover:text-neutral-800'"
+              class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
+            >
+              Output
+            </button>
+            <button
+              type="button"
+              @click="viewMode = 'compare'"
+              :class="viewMode === 'compare' ? 'bg-white shadow text-neutral-900' : 'text-neutral-600 hover:text-neutral-800'"
+              :disabled="!resultURL"
+              class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Compare
+            </button>
+          </div>
+          <a
+            x-show="resultURL && !loading"
+            :href="resultURL"
+            download="fibo-edit-result.png"
+            class="text-sm font-medium text-neutral-700 hover:text-neutral-900 underline"
+          >
+            Download
+          </a>
+        </div>
+
+        <div class="aspect-square bg-neutral-200 rounded-lg overflow-hidden relative min-h-[280px] mt-2">
+          <!-- Input only -->
+          <div x-show="viewMode === 'input'" class="absolute inset-0 flex items-center justify-center">
+            <template x-if="imageURL">
+              <img :src="imageURL" alt="Input" class="max-w-full max-h-full object-contain" />
+            </template>
+            <span x-show="!imageURL" class="text-neutral-400 text-sm">No image</span>
+          </div>
+
+          <!-- Output only -->
+          <div x-show="viewMode === 'output'" class="absolute inset-0 flex items-center justify-center">
+            <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-neutral-100/80 rounded-lg z-10">
+              <div class="text-center">
+                <div class="animate-pulse text-neutral-500 mb-1">Editing…</div>
+                <p class="text-xs text-neutral-400">This may take a minute</p>
+              </div>
+            </div>
+            <template x-if="resultURL && !loading">
+              <img :src="resultURL" alt="Result" class="max-w-full max-h-full object-contain" />
+            </template>
+            <span x-show="!resultURL && !loading" class="text-neutral-400 text-sm">—</span>
+          </div>
+
+          <!-- Compare: before/after slider -->
+          <div
+            x-show="viewMode === 'compare' && imageURL && resultURL"
+            class="absolute inset-0 flex items-center justify-center"
+          >
+            <div class="relative w-full h-full max-w-full max-h-full">
+              <img :src="imageURL" alt="Before" class="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+              <div
+                class="absolute inset-0 overflow-hidden pointer-events-none"
+                :style="'clip-path: inset(0 ' + (100 - compareSlider) + '% 0 0)'"
+              >
+                <img :src="resultURL" alt="After" class="absolute inset-0 w-full h-full object-contain" />
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                x-model.number="compareSlider"
+                class="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-10"
+              />
+              <div
+                class="absolute top-0 bottom-0 w-0.5 bg-white shadow-md pointer-events-none z-0 -translate-x-1/2"
+                :style="'left: ' + compareSlider + '%'"
+              >
+                <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white shadow border border-neutral-200 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p x-show="viewMode === 'compare' && imageURL && resultURL" class="mt-1.5 text-xs text-neutral-500 text-center">
+          Drag the slider to compare before and after
+        </p>
+      </div>
+
+      <p x-show="error" x-text="error" class="text-sm text-red-600"></p>
+    </div>
+
+    <script>
+      function state() {
+        return {
+          prompt: "",
+          imageFile: null,
+          imageURL: "",
+          imageURLInput: "",
+          imageFileName: "",
+          resultURL: "",
+          viewMode: "input",
+          compareSlider: 50,
+          loading: false,
+          error: "",
+          dragOver: false,
+          promptSuggestions: [
+            "Make the sky more dramatic",
+            "Change the background to a beach",
+            "Add a warm sunset glow",
+            "Make it look like a painting",
+          ],
+
+          get canSubmit() {
+            return (this.imageFile || (this.imageURLInput && this.imageURLInput.trim().startsWith("http"))) && this.prompt.trim();
+          },
+
+          onImageChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+              this.imageFile = file;
+              this.imageURL = URL.createObjectURL(file);
+              this.imageFileName = file.name;
+              this.imageURLInput = "";
+              this.resultURL = "";
+              this.error = "";
+            }
+          },
+
+          onDrop(event) {
+            this.dragOver = false;
+            const file = event.dataTransfer?.files?.[0];
+            if (file && file.type.startsWith("image/")) {
+              this.imageFile = file;
+              this.imageURL = URL.createObjectURL(file);
+              this.imageFileName = file.name;
+              this.imageURLInput = "";
+              this.resultURL = "";
+              this.error = "";
+            }
+          },
+
+          loadImageFromURL() {
+            const url = this.imageURLInput?.trim();
+            if (!url || !url.startsWith("http")) return;
+            this.imageFile = null;
+            this.imageURL = url;
+            this.imageFileName = "";
+            this.resultURL = "";
+            this.error = "";
+          },
+
+          clearAll() {
+            this.prompt = "";
+            this.imageFile = null;
+            this.imageURL = "";
+            this.imageURLInput = "";
+            this.imageFileName = "";
+            this.resultURL = "";
+            this.viewMode = "input";
+            this.compareSlider = 50;
+            this.error = "";
+            if (this.$refs?.fileInput) this.$refs.fileInput.value = "";
+          },
+
+          async submitEdit() {
+            if (!this.canSubmit) {
+              this.error = "Enter a prompt and add an image (file or URL).";
+              return;
+            }
+            this.loading = true;
+            this.error = "";
+
+            try {
+              const formData = new FormData();
+              formData.append("prompt", this.prompt.trim());
+              if (this.imageFile) {
+                formData.append("image", this.imageFile);
+              } else {
+                formData.append("image_url", this.imageURLInput.trim());
+              }
+
+              const submitRes = await fetch("/v1/images/edit/async", {
+                method: "POST",
+                body: formData,
+              });
+
+              let submitData;
+              try {
+                submitData = await submitRes.json();
+              } catch {
+                throw new Error(`Request failed: ${submitRes.status}`);
+              }
+              if (!submitRes.ok) {
+                throw new Error(submitData?.message || `Request failed: ${submitRes.status}`);
+              }
+              const callId = submitData.call_id;
+              if (!callId) throw new Error("No call_id returned");
+
+              const poll = async () => {
+                const res = await fetch(`/v1/images/edit/result/${callId}`);
+                if (res.status === 202) return null;
+                let data;
+                try {
+                  data = await res.json();
+                } catch {
+                  throw new Error(`Server error: ${res.status}`);
+                }
+                if (!res.ok) throw new Error(data?.message || `Request failed: ${res.status}`);
+                return data;
+              };
+
+              let data = await poll();
+              while (data === null) {
+                await new Promise((r) => setTimeout(r, 2500));
+                data = await poll();
+              }
+
+              if (data.status === "success" && data.image) {
+                this.resultURL = data.image;
+                this.viewMode = "compare";
+                this.compareSlider = 50;
+              } else {
+                throw new Error("Unexpected response format");
+              }
+            } catch (e) {
+              this.error = e.message || "Something went wrong.";
+            } finally {
+              this.loading = false;
+            }
+          },
+        };
+      }
+    </script>
+  </body>
+</html>
